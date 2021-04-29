@@ -4,15 +4,15 @@
 [![View nuget packages](https://img.shields.io/nuget/v/Singulink.WPF.Data.MethodBinding.svg)](https://www.nuget.org/packages/Singulink.WPF.Data.MethodBinding/)
 [![Build](https://github.com/Singulink/Singulink.WPF.Data.MethodBinding/workflows/build/badge.svg)](https://github.com/Singulink/Singulink.WPF.Data.MethodBinding/actions?query=workflow%3A%22build%22)
 
-MethodBinding provides the ability to bind methods directly to events. It supports a full range of parameter passing scenarios including constants, bindings, event sender and event argument values.
+**MethodBinding** provides the ability to bind events directly to methods. It supports a full range of parameter passing scenarios including constants, bindings, event sender and event argument values.
 
 Features:
 - No restrictions on the method signature.
 - Event sender or the event args can be passed as an argument.
 - Method target is resolved with full PropertyPath binding support.
-- Method arguments can be provided by bindings or other common extensions (i.e. StaticResource or x:Static).
+- Method arguments can be provided by bindings or other common extensions (i.e. `StaticResource` or `x:Static`).
 - Methods are matched by argument types if more than one method with the same name exists.
-- Method arguments passed as XAML strings are converted to the required method parameter type, so you don't have to use extensions / static resources or bloat the XAML by defining the method binding in element syntax instead of attribute syntax just to pass in an int or double.
+- Method arguments passed as XAML strings are converted to the required method parameter types, so you don't have to use extensions / static resources or bloat the XAML by defining the method binding in element syntax instead of attribute syntax just to pass in an int or double.
 
 ### About Singulink
 
@@ -131,3 +131,5 @@ public class ViewModel
 
 
 You can pass in as many parameters as needed. Advanced scenarios can use a binding or other markup extension for the method name as well.
+
+Method binding errors (i.e. the method target is null or the method name can't be resolved) are reported in the output window, similar to how normal WPF binding errors are reported. If you are having a problem with a method binding, debug the application and look there first.
