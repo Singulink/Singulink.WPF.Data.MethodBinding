@@ -18,6 +18,7 @@
   <PropertyGroup Label="Source Link">
     <PublishRepositoryUrl>true</PublishRepositoryUrl>
     <AllowedOutputExtensionsInPackageBuildOutputFolder>$(AllowedOutputExtensionsInPackageBuildOutputFolder);.pdb</AllowedOutputExtensionsInPackageBuildOutputFolder>
+    <Version>1.0.1</Version>
   </PropertyGroup>
 
   <ItemGroup>
