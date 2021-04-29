@@ -1,3 +1,3 @@
 ﻿using System.Windows.Markup;
 
-[assembly: XmlnsDefinition("https://singulink.com/xaml/wpf", "Singulink.WPF.Data")]
+[assembly: XmlnsDefinition("http://schemas.singulink.com/xaml", "Singulink.WPF.Data")]
