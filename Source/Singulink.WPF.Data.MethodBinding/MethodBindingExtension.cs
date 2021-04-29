@@ -22,47 +22,47 @@ namespace Singulink.WPF.Data
         /// <summary>
         /// Initializes a new instance of the <see cref="MethodBindingExtension"/> class.
         /// </summary>
-        public MethodBindingExtension(object? method) : this(new[] { method }) { }
+        public MethodBindingExtension(object method) : this(new[] { method }) { }
 
         /// <summary>
         /// Initializes a new instance of the <see cref="MethodBindingExtension"/> class.
         /// </summary>
-        public MethodBindingExtension(object? arg0, object? arg1) : this(new[] { arg0, arg1 }) { }
+        public MethodBindingExtension(object arg0, object? arg1) : this(new[] { arg0, arg1 }) { }
 
         /// <summary>
         /// Initializes a new instance of the <see cref="MethodBindingExtension"/> class.
         /// </summary>
-        public MethodBindingExtension(object? arg0, object? arg1, object? arg2) : this(new[] { arg0, arg1, arg2 }) { }
+        public MethodBindingExtension(object arg0, object? arg1, object? arg2) : this(new[] { arg0, arg1, arg2 }) { }
 
         /// <summary>
         /// Initializes a new instance of the <see cref="MethodBindingExtension"/> class.
         /// </summary>
-        public MethodBindingExtension(object? arg0, object? arg1, object? arg2, object? arg3) : this(new[] { arg0, arg1, arg2, arg3 }) { }
+        public MethodBindingExtension(object arg0, object? arg1, object? arg2, object? arg3) : this(new[] { arg0, arg1, arg2, arg3 }) { }
 
         /// <summary>
         /// Initializes a new instance of the <see cref="MethodBindingExtension"/> class.
         /// </summary>
-        public MethodBindingExtension(object? arg0, object? arg1, object? arg2, object? arg3, object? arg4) : this(new[] { arg0, arg1, arg2, arg3, arg4 }) { }
+        public MethodBindingExtension(object arg0, object? arg1, object? arg2, object? arg3, object? arg4) : this(new[] { arg0, arg1, arg2, arg3, arg4 }) { }
 
         /// <summary>
         /// Initializes a new instance of the <see cref="MethodBindingExtension"/> class.
         /// </summary>
-        public MethodBindingExtension(object? arg0, object? arg1, object? arg2, object? arg3, object? arg4, object? arg5) : this(new[] { arg0, arg1, arg2, arg3, arg4, arg5 }) { }
+        public MethodBindingExtension(object arg0, object? arg1, object? arg2, object? arg3, object? arg4, object? arg5) : this(new[] { arg0, arg1, arg2, arg3, arg4, arg5 }) { }
 
         /// <summary>
         /// Initializes a new instance of the <see cref="MethodBindingExtension"/> class.
         /// </summary>
-        public MethodBindingExtension(object? arg0, object? arg1, object? arg2, object? arg3, object? arg4, object? arg5, object? arg6) : this(new[] { arg0, arg1, arg2, arg3, arg4, arg5, arg6 }) { }
+        public MethodBindingExtension(object arg0, object? arg1, object? arg2, object? arg3, object? arg4, object? arg5, object? arg6) : this(new[] { arg0, arg1, arg2, arg3, arg4, arg5, arg6 }) { }
 
         /// <summary>
         /// Initializes a new instance of the <see cref="MethodBindingExtension"/> class.
         /// </summary>
-        public MethodBindingExtension(object? arg0, object? arg1, object? arg2, object? arg3, object? arg4, object? arg5, object? arg6, object? arg7) : this(new[] { arg0, arg1, arg2, arg3, arg4, arg5, arg6, arg7 }) { }
+        public MethodBindingExtension(object arg0, object? arg1, object? arg2, object? arg3, object? arg4, object? arg5, object? arg6, object? arg7) : this(new[] { arg0, arg1, arg2, arg3, arg4, arg5, arg6, arg7 }) { }
 
         /// <summary>
         /// Initializes a new instance of the <see cref="MethodBindingExtension"/> class.
         /// </summary>
-        public MethodBindingExtension(object? arg0, object? arg1, object? arg2, object? arg3, object? arg4, object? arg5, object? arg6, object? arg7, object? arg8) : this(new[] { arg0, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8 }) { }
+        public MethodBindingExtension(object arg0, object? arg1, object? arg2, object? arg3, object? arg4, object? arg5, object? arg6, object? arg7, object? arg8) : this(new[] { arg0, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8 }) { }
 
         private MethodBindingExtension(object?[] arguments)
         {
@@ -115,7 +115,7 @@ namespace Singulink.WPF.Data
                 object methodTarget;
 
                 // If the first argument is a string then it must be the name of the method to invoke on the data context.
-                // If not then it is the excplicit method target object and the second argument will be name of the method to invoke.
+                // If not then it is the explicit method target object and the second argument will be name of the method to invoke.
 
                 string? methodName;
 
