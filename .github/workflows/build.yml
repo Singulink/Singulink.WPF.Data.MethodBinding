@@ -1,0 +1,42 @@
+name: build
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  debug:
+
+    runs-on: windows-latest
+
+    steps:
+    - uses: actions/checkout@v2
+    - name: Setup .NET Core 3.0
+      uses: actions/setup-dotnet@v1
+      with:
+        dotnet-version: 3.0.103
+    - name: Install dependencies
+      run: dotnet restore
+      working-directory: Source
+    - name: Build
+      run: dotnet build --configuration Debug --no-restore
+      working-directory: Source
+
+  release:
+
+    runs-on: windows-latest
+
+    steps:
+    - uses: actions/checkout@v2
+    - name: Setup .NET Core 3.0
+      uses: actions/setup-dotnet@v1
+      with:
+        dotnet-version: 3.0.103
+    - name: Install dependencies
+      run: dotnet restore
+      working-directory: Source
+    - name: Build
+      run: dotnet build --configuration Release --no-restore
+      working-directory: Source
