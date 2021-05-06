@@ -122,40 +122,44 @@ namespace Singulink.WPF.Data
                 // If not then it is the explicit method target object and the second argument will be name of the method to invoke.
 
                 string? methodName;
+                Type methodTargetType;
 
                 if ((methodName = arg0 as string) != null) {
                     if (source is FrameworkElement element) {
-                        if (element.DataContext == null) {
-                            Trace.TraceWarning($"[{nameof(MethodBindingExtension)}] Null data context on element '{element}'.");
+                        methodTarget = element.DataContext;
+
+                        if (methodTarget == null) {
+                            Trace.TraceWarning($"[{nameof(MethodBindingExtension)}] Null data context for method '{methodName}' on element '{element.Name}' (type: '{element.GetType()}').");
                             return;
                         }
 
-                        methodTarget = element.DataContext;
+                        methodTargetType = methodTarget.GetType();
                         methodArgsStart = 1;
                     }
                     else {
-                        Trace.TraceWarning($"[{nameof(MethodBindingExtension)}] Shorthand syntax not supported on element type '{source.GetType()}' because it is not a FrameworkElement and has no data context. Method target must be specified.");
+                        Trace.TraceWarning($"[{nameof(MethodBindingExtension)}] Method target must be specified on element type '{source.GetType()}' because it is not a FrameworkElement and has no data context.");
                         return;
                     }
                 }
                 else if (_argumentProperties.Count >= 2) {
                     methodTarget = arg0;
+                    methodTargetType = methodTarget.GetType();
                     methodArgsStart = 2;
 
                     object arg1 = source.GetValue(_argumentProperties[1]);
 
                     if (arg1 == null) {
-                        Trace.TraceWarning($"[{nameof(MethodBindingExtension)}] First argument resolved as a method target object of type '{methodTarget.GetType()}', second argument must resolve to a method name and cannot resolve to null.");
+                        Trace.TraceWarning($"[{nameof(MethodBindingExtension)}] Method target type resolved to '{methodTargetType}', method name resolved to null.");
                         return;
                     }
 
                     if ((methodName = arg1 as string) == null) {
-                        Trace.TraceWarning($"[{nameof(MethodBindingExtension)}] First argument resolved as a method target object of type '{methodTarget.GetType()}', second argument (method name) must resolve to a '{typeof(string)}' (actual type: '{arg1.GetType()}').");
+                        Trace.TraceWarning($"[{nameof(MethodBindingExtension)}] Method target type resolved to '{methodTargetType}', method name must be type '{typeof(string)}' (actual type: '{arg1.GetType()}').");
                         return;
                     }
                 }
                 else {
-                    Trace.TraceWarning($"[{nameof(MethodBindingExtension)}] Method name must resolve to a '{typeof(string)}' (actual type: '{arg0.GetType()}').");
+                    Trace.TraceWarning($"[{nameof(MethodBindingExtension)}] Method name must be type '{typeof(string)}' (actual type: '{arg0.GetType()}').");
                     return;
                 }
 
@@ -172,7 +176,6 @@ namespace Singulink.WPF.Data
                     arguments[i - methodArgsStart] = argValue;
                 }
 
-                var methodTargetType = methodTarget.GetType();
                 (var methodInfo, bool convertStrings) = GetCachedMethod(methodTarget.GetType(), methodName, arguments);
 
                 if (methodInfo == null)
@@ -186,7 +189,7 @@ namespace Singulink.WPF.Data
 
                         if (arguments[i] == null) {
                             if (paramType.IsValueType && Nullable.GetUnderlyingType(paramType) == null) {
-                                Trace.TraceWarning($"[{nameof(MethodBindingExtension)}] Method '{methodName}' (target type '{methodTargetType}') cannot accept 'null' values for parameter {i + 1} (name: '{parameters[i].Name}', type: '{paramType}').");
+                                Trace.TraceWarning($"[{nameof(MethodBindingExtension)}] Method '{methodName}' (target type '{methodTargetType}') parameter {i + 1} (name: '{parameters[i].Name}', type: '{paramType}') is not assignable to null.");
                                 return;
                             }
                         }
@@ -196,11 +199,12 @@ namespace Singulink.WPF.Data
                                 arguments[i] = TypeDescriptor.GetConverter(parameters[i].ParameterType).ConvertFromString(stringArg);
                             }
                             catch (Exception ex) {
-                                Trace.TraceWarning($"[{nameof(MethodBindingExtension)}] Method '{methodName}' (target type '{methodTargetType}') cannot convert parameter {i + 1} (name: '{parameters[i].Name}', type: '{paramType}') value from XAML string argument '{stringArg}': {ex}.");
+                                Trace.TraceWarning($"[{nameof(MethodBindingExtension)}] Method '{methodName}' (target type '{methodTargetType}') parameter {i + 1} (name: '{parameters[i].Name}', type: '{paramType}') could not be assigned from XAML string argument '{stringArg}': {ex}.");
+                                return;
                             }
                         }
                         else if (!parameters[i].ParameterType.IsInstanceOfType(arguments[i])) {
-                            Trace.TraceWarning($"[{nameof(MethodBindingExtension)}] Method '{methodName}' (target type '{methodTargetType}') cannot assign parameter {i + 1} (name: '{parameters[i].Name}', type: '{paramType}') value from argument type '{arguments[i]!.GetType()}'.");
+                            Trace.TraceWarning($"[{nameof(MethodBindingExtension)}] Method '{methodName}' (target type '{methodTargetType}') parameter {i + 1} (name: '{parameters[i].Name}', type: '{paramType}') is not assignable from argument type '{arguments[i]!.GetType()}'.");
                             return;
                         }
                     }
@@ -256,11 +260,15 @@ namespace Singulink.WPF.Data
 
                     if (i == argumentTypes.Length) {
                         if (methodInfo != null) {
-                            Trace.TraceWarning($"[{nameof(MethodBindingExtension)}] Multiple matching methods named '{methodName}' on target type '{methodTargetType}' that accept the parameters provided.");
+                            Trace.TraceWarning($"[{nameof(MethodBindingExtension)}] Multiple matching methods '{methodName}' (target type '{methodTargetType}') that accept the provided arguments ({GetArgTypesString()}).");
                             return (null, false);
                         }
 
                         methodInfo = method.Info;
+
+                        // First parameterless method is from most specific subclass so use that since we don't need to do any other overload matching logic.
+                        if (i == 0)
+                            break;
                     }
                 }
 
@@ -270,8 +278,14 @@ namespace Singulink.WPF.Data
                 }
             }
 
-            Trace.TraceWarning($"[{nameof(MethodBindingExtension)}] Could not find a method '{methodName}' on target type '{methodTargetType}' that accepts the parameters provided.");
+            if (arguments.Length == 0)
+                Trace.TraceWarning($"[{nameof(MethodBindingExtension)}] Could not find parameterless method '{methodName}' (target type '{methodTargetType}').");
+            else
+                Trace.TraceWarning($"[{nameof(MethodBindingExtension)}] Could not find method '{methodName}' (target type '{methodTargetType}') that accepts the provided arguments ({GetArgTypesString()}).");
+
             return (null, false);
+
+            string GetArgTypesString() => string.Join(", ", argumentTypes.Select(a => a == null ? "null" : $"'{a}'"));
         }
 
         private static DependencyProperty SetUnusedStorageProperty(DependencyObject obj, object? value)
