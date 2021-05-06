@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Diagnostics;
@@ -14,7 +15,10 @@ namespace Singulink.WPF.Data
     /// </summary>
     public class MethodBindingExtension : MarkupExtension
     {
-        private static readonly List<DependencyProperty> s_storageProperties = new List<DependencyProperty>();
+        private static readonly List<DependencyProperty> s_storageProperties = new();
+
+        private static readonly ConcurrentDictionary<(Type TargetType, string MethodName, int ArgCount), MethodInfo> s_singleMethodInfoCache = new();
+        private static readonly ConcurrentDictionary<(Type TargetType, string MethodName, Type?[] ArgTypes), MethodInfo> s_methodInfoCache = new(new MethodCacheEqualityComparer());
 
         private readonly object?[] _arguments;
         private readonly List<DependencyProperty> _argumentProperties = new List<DependencyProperty>();
@@ -169,68 +173,127 @@ namespace Singulink.WPF.Data
                 }
 
                 var methodTargetType = methodTarget.GetType();
+                (var methodInfo, bool convertStrings) = GetCachedMethod(methodTarget.GetType(), methodName, arguments);
 
-                // Try invoking the method by resolving it based on the arguments provided
-
-                try {
-                    methodTargetType.InvokeMember(methodName, BindingFlags.InvokeMethod, null, methodTarget, arguments, null);
+                if (methodInfo == null)
                     return;
-                }
-                catch (MissingMethodException) { }
 
-                // Couldn't match a method with the raw arguments, so check if we can find a method with the same name
-                // and parameter count and try to convert any XAML string arguments to match the method parameter types
+                if (convertStrings) {
+                    var parameters = methodInfo.GetParameters();
 
-                MethodInfo? method = methodTargetType.GetMethods().SingleOrDefault(m => m.Name == methodName && m.GetParameters().Length == arguments.Length);
+                    for (int i = 0; i < arguments.Length; i++) {
+                        var paramType = parameters[i].ParameterType;
 
-                if (method != null) {
-                    var parameters = method.GetParameters();
-
-                    for (int i = 0; i < _arguments.Length; i++) {
                         if (arguments[i] == null) {
-                            if (parameters[i].ParameterType.IsValueType) {
-                                method = null;
-                                break;
+                            if (paramType.IsValueType && Nullable.GetUnderlyingType(paramType) == null) {
+                                Trace.TraceWarning($"[{nameof(MethodBindingExtension)}] Method '{methodName}' (target type '{methodTargetType}') cannot accept 'null' values for parameter {i + 1} (name: '{parameters[i].Name}', type: '{paramType}').");
+                                return;
                             }
                         }
-                        else if (_arguments[i] is string stringArg && parameters[i].ParameterType != typeof(string)) {
+                        else if (paramType != typeof(object) && paramType != typeof(string) && _arguments[i + methodArgsStart] is string stringArg) {
                             // The original value provided for this argument was a XAML string so try to convert it
-                            arguments[i] = TypeDescriptor.GetConverter(parameters[i].ParameterType).ConvertFromString(stringArg);
+                            try {
+                                arguments[i] = TypeDescriptor.GetConverter(parameters[i].ParameterType).ConvertFromString(stringArg);
+                            }
+                            catch (Exception ex) {
+                                Trace.TraceWarning($"[{nameof(MethodBindingExtension)}] Method '{methodName}' (target type '{methodTargetType}') cannot convert parameter {i + 1} (name: '{parameters[i].Name}', type: '{paramType}') value from XAML string argument '{stringArg}': {ex}.");
+                            }
                         }
                         else if (!parameters[i].ParameterType.IsInstanceOfType(arguments[i])) {
-                            method = null;
-                            break;
+                            Trace.TraceWarning($"[{nameof(MethodBindingExtension)}] Method '{methodName}' (target type '{methodTargetType}') cannot assign parameter {i + 1} (name: '{parameters[i].Name}', type: '{paramType}') value from argument type '{arguments[i]!.GetType()}'.");
+                            return;
                         }
                     }
-
-                    method?.Invoke(methodTarget, arguments);
                 }
 
-                if (method == null)
-                    Trace.TraceWarning($"[{nameof(MethodBindingExtension)}] Could not find a method '{methodName}' on target type '{methodTargetType}' that accepts the parameters provided.");
+                methodInfo.Invoke(methodTarget, arguments);
             };
 
             return Delegate.CreateDelegate(eventHandlerType, handler.Target, handler.Method);
         }
 
+        private static (MethodInfo? Info, bool ConvertStrings) GetCachedMethod(Type methodTargetType, string methodName, object?[] arguments)
+        {
+            if (s_singleMethodInfoCache.TryGetValue((methodTargetType, methodName, arguments.Length), out var methodInfo))
+                return (methodInfo, true);
+
+            var argumentTypes = Array.ConvertAll(arguments, a => a?.GetType());
+
+            if (s_methodInfoCache.TryGetValue((methodTargetType, methodName, argumentTypes), out methodInfo)) {
+                return (methodInfo, false);
+            }
+
+            var methods = methodTargetType.GetMethods(BindingFlags.Public | BindingFlags.Instance)
+                               .Where(m => m.Name == methodName)
+                               .Select(m => (Info: m, Parameters: m.GetParameters()))
+                               .Where(m => m.Parameters.Length == argumentTypes.Length)
+                               .ToArray();
+
+            if (methods.Length == 1) {
+                methodInfo = methods[0].Info;
+                s_singleMethodInfoCache[(methodTargetType, methodName, argumentTypes.Length)] = methodInfo;
+                return (methodInfo, true);
+            }
+            else if (methods.Length > 1) {
+                foreach (var method in methods) {
+                    int i;
+                    for (i = 0; i < argumentTypes.Length; i++) {
+                        var paramType = method.Parameters[i].ParameterType;
+
+                        if (method.Parameters[i].IsOut || paramType.IsByRef || paramType.IsPointer)
+                            break;
+
+                        var argType = argumentTypes[i];
+
+                        if (argType == null) {
+                            if (paramType.IsValueType && Nullable.GetUnderlyingType(paramType) == null)
+                                break;
+                        }
+                        else if (!paramType.IsAssignableFrom(argType)) {
+                            break;
+                        }
+                    }
+
+                    if (i == argumentTypes.Length) {
+                        if (methodInfo != null) {
+                            Trace.TraceWarning($"[{nameof(MethodBindingExtension)}] Multiple matching methods named '{methodName}' on target type '{methodTargetType}' that accept the parameters provided.");
+                            return (null, false);
+                        }
+
+                        methodInfo = method.Info;
+                    }
+                }
+
+                if (methodInfo != null) {
+                    s_methodInfoCache[(methodTargetType, methodName, argumentTypes)] = methodInfo;
+                    return (methodInfo, false);
+                }
+            }
+
+            Trace.TraceWarning($"[{nameof(MethodBindingExtension)}] Could not find a method '{methodName}' on target type '{methodTargetType}' that accepts the parameters provided.");
+            return (null, false);
+        }
+
         private static DependencyProperty SetUnusedStorageProperty(DependencyObject obj, object? value)
         {
-            var property = s_storageProperties.Find(p => obj.ReadLocalValue(p) == DependencyProperty.UnsetValue);
+            lock (s_storageProperties) {
+                var property = s_storageProperties.Find(p => obj.ReadLocalValue(p) == DependencyProperty.UnsetValue);
 
-            if (property == null) {
-                property = DependencyProperty.RegisterAttached("Storage" + s_storageProperties.Count, typeof(object), typeof(MethodBindingExtension), new PropertyMetadata());
-                s_storageProperties.Add(property);
-            }
+                if (property == null) {
+                    property = DependencyProperty.RegisterAttached("Storage" + s_storageProperties.Count, typeof(object), typeof(MethodBindingExtension), new PropertyMetadata());
+                    s_storageProperties.Add(property);
+                }
 
-            if (value is MarkupExtension markupExtension) {
-                object resolvedValue = markupExtension.ProvideValue(new ServiceProvider(obj, property));
-                obj.SetValue(property, resolvedValue);
-            }
-            else {
-                obj.SetValue(property, value);
-            }
+                if (value is MarkupExtension markupExtension) {
+                    object resolvedValue = markupExtension.ProvideValue(new ServiceProvider(obj, property));
+                    obj.SetValue(property, resolvedValue);
+                }
+                else {
+                    obj.SetValue(property, value);
+                }
 
-            return property;
+                return property;
+            }
         }
 
         private class ServiceProvider : IServiceProvider, IProvideValueTarget
@@ -246,6 +309,27 @@ namespace Singulink.WPF.Data
             }
 
             public object? GetService(Type serviceType) => serviceType.IsInstanceOfType(this) ? this : null;
+        }
+
+        private class MethodCacheEqualityComparer : EqualityComparer<(Type TargetType, string MethodName, Type?[] ArgTypes)>
+        {
+            public override bool Equals((Type TargetType, string MethodName, Type?[] ArgTypes) x, (Type TargetType, string MethodName, Type?[] ArgTypes) y)
+            {
+                return x.TargetType == y.TargetType && x.ArgTypes.Length == y.ArgTypes.Length && x.MethodName == y.MethodName && x.ArgTypes.SequenceEqual(y.ArgTypes);
+            }
+
+            public override int GetHashCode((Type TargetType, string MethodName, Type?[] ArgTypes) obj)
+            {
+                HashCode hashCode = default;
+                hashCode.Add(obj.TargetType);
+                hashCode.Add(obj.MethodName);
+                hashCode.Add(obj.ArgTypes.Length);
+
+                foreach (var value in obj.ArgTypes)
+                    hashCode.Add(value);
+
+                return hashCode.ToHashCode();
+            }
         }
     }
 }
