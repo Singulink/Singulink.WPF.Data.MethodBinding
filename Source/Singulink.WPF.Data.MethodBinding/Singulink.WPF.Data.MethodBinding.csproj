@@ -13,12 +13,12 @@
     <PackageIcon>Singulink Icon 128x128.png</PackageIcon>
     <PackageProjectUrl>https://github.com/Singulink/Singulink.WPF.Data.MethodBinding</PackageProjectUrl>
     <Description>Allows binding events directly to methods, including passing custom parameters.</Description>
+    <Version>1.1</Version>
   </PropertyGroup>
 
   <PropertyGroup Label="Source Link">
     <PublishRepositoryUrl>true</PublishRepositoryUrl>
     <AllowedOutputExtensionsInPackageBuildOutputFolder>$(AllowedOutputExtensionsInPackageBuildOutputFolder);.pdb</AllowedOutputExtensionsInPackageBuildOutputFolder>
-    <Version>1.0.1</Version>
   </PropertyGroup>
 
   <ItemGroup>
