@@ -27,6 +27,9 @@ jobs:
     - name: Build
       run: dotnet build --configuration Debug --no-restore
       working-directory: Source
+    - name: Test
+      run: dotnet test --configuration Debug --no-build --verbosity normal
+      working-directory: Source
 
   release:
 
@@ -47,4 +50,7 @@ jobs:
       working-directory: Source
     - name: Build
       run: dotnet build --configuration Release --no-restore
+      working-directory: Source
+    - name: Test
+      run: dotnet test --configuration Release --no-build --verbosity normal
       working-directory: Source

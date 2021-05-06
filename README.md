@@ -2,7 +2,7 @@
 
 [![Join the chat](https://badges.gitter.im/Singulink/community.svg)](https://gitter.im/Singulink/community?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge)
 [![View nuget packages](https://img.shields.io/nuget/v/Singulink.WPF.Data.MethodBinding.svg)](https://www.nuget.org/packages/Singulink.WPF.Data.MethodBinding/)
-[![Build](https://github.com/Singulink/Singulink.WPF.Data.MethodBinding/workflows/build/badge.svg)](https://github.com/Singulink/Singulink.WPF.Data.MethodBinding/actions?query=workflow%3A%22build%22)
+[![Build and Test](https://github.com/Singulink/Singulink.WPF.Data.MethodBinding/workflows/build%20and%20test/badge.svg)](https://github.com/Singulink/Singulink.WPF.Data.MethodBinding/actions?query=workflow%3A%22build+and+test%22)
 
 **MethodBinding** provides the ability to bind events directly to methods. It supports a full range of parameter passing scenarios including constants, bindings, event sender and event argument values.
 
