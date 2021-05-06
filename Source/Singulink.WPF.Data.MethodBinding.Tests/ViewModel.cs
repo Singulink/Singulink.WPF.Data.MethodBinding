@@ -1,9 +1,11 @@
 ﻿using System;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 
+#pragma warning disable RCS1163 // Unused parameter.
+#pragma warning disable CA1801 // Review unused parameters
+
 namespace Singulink.WPF.Data.Tests
 {
-
     public class ViewModel
     {
         public bool Executed { get; private set; }
