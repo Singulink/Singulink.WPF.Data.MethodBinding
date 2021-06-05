@@ -20,6 +20,8 @@ namespace Singulink.WPF.Data
         private static readonly ConcurrentDictionary<(Type TargetType, string MethodName, int ArgCount), MethodInfo> s_singleMethodInfoCache = new();
         private static readonly ConcurrentDictionary<(Type TargetType, string MethodName, Type?[] ArgTypes), MethodInfo> s_methodInfoCache = new(new MethodCacheEqualityComparer());
 
+        private static readonly ConcurrentDictionary<string, MethodInfo> s_canExcuteMethodInfoCache = new();
+
         private readonly object?[] _arguments;
         private readonly List<DependencyProperty> _argumentProperties = new List<DependencyProperty>();
 
@@ -177,6 +179,7 @@ namespace Singulink.WPF.Data
                 }
 
                 (var methodInfo, bool convertStrings) = GetCachedMethod(methodTarget.GetType(), methodName, arguments);
+                var canExcuteMethodInfo = GetCanExcuteMethod(methodInfo);
 
                 if (methodInfo == null)
                     return;
@@ -210,7 +213,9 @@ namespace Singulink.WPF.Data
                     }
                 }
 
-                methodInfo.Invoke(methodTarget, arguments);
+                if (canExcuteMethodInfo == null || canExcuteMethodInfo?.Invoke(methodTarget, canExcuteMethodInfo.GetParameters().Length > 0 ? arguments : null) != null) {
+                    methodInfo.Invoke(methodTarget, arguments);
+                }
             };
 
             return Delegate.CreateDelegate(eventHandlerType, handler.Target, handler.Method);
@@ -286,6 +291,34 @@ namespace Singulink.WPF.Data
             return (null, false);
 
             string GetArgTypesString() => string.Join(", ", argumentTypes.Select(a => a == null ? "null" : $"'{a}'"));
+        }
+
+        private static MethodInfo? GetCanExcuteMethod(MethodInfo methodInfo)
+        {
+            if (methodInfo is null) {
+                return null;
+            }
+
+            if (s_canExcuteMethodInfoCache.TryGetValue($"Can{methodInfo.Name}", out var canExcuteMethod)) {
+                return canExcuteMethod;
+            }
+
+            var canExcuteMethods = methodInfo.DeclaringType?.GetMethods(BindingFlags.Public | BindingFlags.Instance)
+                              .Where(m => m.Name == $"Can{methodInfo.Name}" && m.ReturnType == typeof(bool))
+                              .Where(m => m.GetParameters().Select(x => x.ParameterType)
+                                          == methodInfo.GetParameters().Select(x => x.ParameterType)
+                                          || m.GetParameters().Length == 0)
+                              .ToList();
+
+            canExcuteMethods?.Sort((x, y) => x.GetParameters().Length - y.GetParameters().Length);
+
+            if (canExcuteMethods?.Count > 0) {
+                s_canExcuteMethodInfoCache.TryAdd($"Can{methodInfo.Name}", canExcuteMethods[^1]);
+
+                return canExcuteMethods[^1];
+            }
+
+            return null;
         }
 
         private static DependencyProperty SetUnusedStorageProperty(DependencyObject obj, object? value)
