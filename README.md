@@ -4,6 +4,9 @@
 [![View nuget packages](https://img.shields.io/nuget/v/Singulink.WPF.Data.MethodBinding.svg)](https://www.nuget.org/packages/Singulink.WPF.Data.MethodBinding/)
 [![Build and Test](https://github.com/Singulink/Singulink.WPF.Data.MethodBinding/workflows/build%20and%20test/badge.svg)](https://github.com/Singulink/Singulink.WPF.Data.MethodBinding/actions?query=workflow%3A%22build+and+test%22)
 
+> [!NOTE]
+> **This project is no longer maintained, and the repository is archived.** The library still works, there are no known issues, and the package remains available on NuGet, so it's fine to keep using it. However, no updates or fixes are planned, and issues and pull requests can no longer be opened. It's MIT licensed, so you're welcome to fork it if you need changes.
+
 **MethodBinding** provides the ability to bind events directly to methods. It supports a full range of parameter passing scenarios including constants, bindings, event sender and event argument values.
 
 Features:
